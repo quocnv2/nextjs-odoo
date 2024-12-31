@@ -1,11 +1,9 @@
-import Image from "next/image";
-import styles from "./page.module.css";
 import LoginPage from "../pages/login";
-
+import "bootstrap/dist/css/bootstrap.min.css";
 export default function Home() {
   return (
     <>
-    <LoginPage/>
+      <LoginPage />
     </>
   );
 }

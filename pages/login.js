@@ -1,78 +1,146 @@
 "use client";
 import { useState } from "react";
 import axios from "axios";
-import { useRouter } from 'next/router'
+import { useRouter } from "next/router";
+import "bootstrap/dist/css/bootstrap.min.css";
+import Modal from "../component/Modal"; // Import Modal component
+
 const Login = () => {
-  const [login, setLogin] = useState(""); // Lưu giá trị login
-  const [password, setPassword] = useState(""); // Lưu giá trị password
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const router = useRouter()
+  const [login, setLogin] = useState("");
+  const [password, setPassword] = useState("");
+  const [modalVisible, setModalVisible] = useState(false); // Trạng thái hiển thị modal
+  const [modalConfig, setModalConfig] = useState({
+    title: "",
+    icon: "",
+    message: "",
+    status: "",
+  });
+  const router = useRouter();
+
   const handleLogin = async (e) => {
     e.preventDefault();
 
     // Tạo payload JSON để gửi
     const payload = {
-      login: login, // Lấy giá trị người dùng nhập
-      password: password, // Lấy giá trị người dùng nhập
+      login: login.trim(), // Đảm bảo không có khoảng trắng thừa
+      password: password.trim(),
     };
 
     try {
-      // Gửi request đến API
-      const response = await axios.post("http://localhost:8069/api/v1/login", payload, {
-        headers: {
-          "Content-Type": "application/json", // Đảm bảo định dạng JSON
-        },
-      });
+      const response = await axios.post(
+        "http://localhost:8069/api/v1/login",
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      // Xử lý phản hồi từ API
       if (response.data.success) {
-        setSuccess(true);
-        setError("");
-        router.push("/employee");
+        // Cấu hình modal hiển thị thông báo thành công
+        setModalConfig({
+          title: "Success",
+          icon: "bi-check-circle", // Sử dụng Bootstrap Icon
+          message: "Login successful! Redirecting to Employee page...",
+          status: "success",
+        });
+        setModalVisible(true);
+
+        // Đặt trạng thái success và chuyển hướng sau khi đóng modal
+        setTimeout(() => {
+          localStorage.setItem("user", JSON.stringify(response.data));
+          setModalVisible(false);
+          router.push("/employee");
+        }, 2000);
       } else {
-        setError(response.data.error || "Login failed");
-        setSuccess(false);
+        // Hiển thị lỗi trong modal
+        setModalConfig({
+          title: "Login Failed",
+          icon: "bi-exclamation-triangle", // Sử dụng Bootstrap Icon
+          message: response.data.error || "Invalid login credentials.",
+          status: "error",
+        });
+        setModalVisible(true);
       }
     } catch (error) {
+      // Xử lý lỗi khi không kết nối được hoặc bị từ chối
+      const errorMessage =
+        error.response?.status === 403
+          ? "Access Denied: You do not have permission."
+          : "Invalid user and password";
+      setModalConfig({
+        title: "Error",
+        icon: "bi-exclamation-triangle",
+        message: errorMessage,
+        status: "error",
+      });
+      setModalVisible(true);
       console.error("Error:", error.response?.data || error.message);
-      setError("Failed to connect to API");
-      setSuccess(false);
     }
   };
 
+  const closeModal = () => {
+    setModalVisible(false);
+  };
+
   return (
-    <div style={{ maxWidth: "400px", margin: "50px auto", textAlign: "center" }}>
-      <h1>Login to Odoo</h1>
-      <form onSubmit={handleLogin}>
-        <div>
-          <input
-            type="text"
-            placeholder="Login"
-            value={login}
-            onChange={(e) => setLogin(e.target.value)} // Cập nhật login
-            required
-            autoComplete="username"
-            style={{ marginBottom: "10px", padding: "10px", width: "100%" }}
+    <div className="d-flex justify-content-center align-items-center vh-100">
+      <div
+        className="card shadow p-4"
+        style={{ maxWidth: "400px", width: "100%" }}
+      >
+        <h1 className="text-center mb-4">Login to Odoo</h1>
+        <form onSubmit={handleLogin}>
+          {/* Input Email */}
+          <div className="mb-3">
+            <label htmlFor="loginInput" className="form-label">
+              Email Address
+            </label>
+            <input
+              type="text"
+              className="form-control"
+              id="loginInput"
+              placeholder="Enter your email"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)} // Cập nhật trạng thái login
+              required
+            />
+          </div>
+
+          {/* Input Password */}
+          <div className="mb-3">
+            <label htmlFor="passwordInput" className="form-label">
+              Password
+            </label>
+            <input
+              type="password"
+              className="form-control"
+              id="passwordInput"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)} // Cập nhật trạng thái password
+              required
+            />
+          </div>
+
+          {/* Submit Button */}
+          <button type="submit" className="btn btn-primary w-100">
+            Login
+          </button>
+        </form>
+
+        {/* Hiển thị modal nếu modalVisible = true */}
+        {modalVisible && (
+          <Modal
+            title={modalConfig.title}
+            icon={modalConfig.icon}
+            message={modalConfig.message}
+            status={modalConfig.status}
+            onClose={closeModal}
           />
-        </div>
-        <div>
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)} // Cập nhật password
-            required
-            autoComplete="current-password"
-            style={{ marginBottom: "10px", padding: "10px", width: "100%" }}
-          />
-        </div>
-        <button type="submit" style={{ padding: "10px 20px", cursor: "pointer" }}>
-          Login
-        </button>
-      </form>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "green" }}>Login successful!</p>}
+        )}
+      </div>
     </div>
   );
 };
